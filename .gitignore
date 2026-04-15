@@ -1,0 +1,102 @@
+# =========================
+# 🐍 Python cache & compiled
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# =========================
+# 🧪 Virtual environments
+# =========================
+venv/
+env/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# =========================
+# 🔐 Environment variables
+# =========================
+.env
+.env.*
+*.env
+
+# =========================
+# 🧾 Logs & runtime files
+# =========================
+*.log
+*.pid
+*.seed
+*.out
+*.err
+
+# =========================
+# 🗄️ Databases (local/dev)
+# =========================
+*.sqlite3
+*.db
+
+# =========================
+# 📦 Build / packaging
+# =========================
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# =========================
+# 🧪 Testing & coverage
+# =========================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# =========================
+# 🧰 IDE / Editor
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# =========================
+# 📓 Jupyter Notebook
+# =========================
+.ipynb_checkpoints
+
+# =========================
+# ⚡ FastAPI / ASGI runtime
+# =========================
+*.sock
+
+# =========================
+# 🐳 Docker
+# =========================
+.env.docker
+docker-compose.override.yml
+
+# =========================
+# ☁️ OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# 🔑 Security / secrets
+# =========================
+*.pem
+*.key
+*.crt
+
+# =========================
+# 📁 Misc
+# =========================
+*.bak
+*.tmp
+*.temp
