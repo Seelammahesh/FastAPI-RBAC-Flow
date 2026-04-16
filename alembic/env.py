@@ -9,6 +9,7 @@ from app.models.permissions import Permission
 from app.models.role import Role
 from app.models.user import User
 from app.models.tokens import RefreshToken
+from app.models.otp import OTP
 
 
 # this is the Alembic Config object, which provides

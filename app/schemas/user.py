@@ -9,6 +9,10 @@ class UserLogin(BaseModel):
     username : str
     password : str
 
+class OTPVerify(BaseModel):
+    username: str
+    otp: str
+
 class UserOut(BaseModel):
     id : int
     username : str

@@ -1,6 +1,6 @@
 #app/api/routes/user.py
 from fastapi import APIRouter, Depends
-from app.schemas.user  import UserCreate,UserLogin,UserOut
+from app.schemas.user  import OTPVerify, UserCreate,UserLogin,UserOut
 from app.services.user_service import create_user,authenticate_user
 from sqlalchemy.orm import Session
 from app.core.security import create_access_token,create_refresh_token
@@ -12,8 +12,16 @@ from jose import jwt
 from app.models.tokens import RefreshToken
 from app.models.user import User
 from app.schemas.token import RefreshTokenRequest
+from app.models.otp import OTP
 
 from app.models.permissions import LogoutRequest
+from app.services.otp_service import create_otp, verify_user_otp
+from app.core.security import hash_password
+
+
+
+
+
 router =APIRouter()
 
 @router.post("/register")
@@ -24,23 +32,43 @@ def register(user:UserCreate, db : Session =Depends(get_db)):
 
 
 @router.post("/login")
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    db_user = authenticate_user(db, form_data.username, form_data.password)
+def login(user: UserLogin, db: Session = Depends(get_db)):
+    db_user = authenticate_user(db, user.username, user.password)
 
     if not db_user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
+    # Generate OTP
+    otp = create_otp(db, db_user.id, "login")
+    print(f"Generated OTP for user {db_user.username}: {otp}")
+
+    return {"message": "OTP sent to your registered method"}
+
+
+@router.post("/verify-login")
+def verify_login(data: OTPVerify, db: Session = Depends(get_db)):
+    # Find user by username
+    db_user = db.query(User).filter(User.username == data.username).first()
+
+    if not db_user:
+        raise HTTPException(status_code=401, detail="Invalid username")
+
+    # Verify OTP
+    if not verify_user_otp(db, db_user.id, data.otp, "login"):
+        raise HTTPException(status_code=401, detail="Invalid or expired OTP")
+
+    # Create tokens
     access_token = create_access_token({
         "sub": db_user.username,
         "role": db_user.role.name
     })
 
-    refresh_token =create_refresh_token({
+    refresh_token = create_refresh_token({
         "sub": db_user.username,
         "role": db_user.role.name
     })
 
-    db_token=RefreshToken(
+    db_token = RefreshToken(
         token=refresh_token,
         user_id=db_user.id
     )
@@ -48,11 +76,29 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     db.commit()
 
     return {
-        "access_token": access_token, 
+        "access_token": access_token,
         "refresh_token": refresh_token,
-        "token_type": "bearer"}
+        "token_type": "bearer"
+    }
 
     
+@router.post("/resend-login-otp")
+def resend_login_otp(username: str, db: Session = Depends(get_db)):
+
+    user = db.query(User).filter(User.username == username).first()
+
+    if not user:
+        raise HTTPException(404, "User not found")
+
+    otp=create_otp(db, user.id, "resent  opt for login")
+    print(f"New otp sent to the user{username} : {otp}")
+
+    return {
+        "message":"resend Otp sent successfully",
+        "Your otp is":otp
+    }
+
+
 
 @router.get("/me")
 def read_current_user(current_user=Depends(get_current_user)):
@@ -129,9 +175,6 @@ def refresh_token(data : RefreshTokenRequest, db: Session = Depends(get_db)):
 
 
 
-
-
-
 @router.post("/logout")
 def logout(data: LogoutRequest, db: Session = Depends(get_db)):
     print("LOGOUT HIT")
@@ -150,3 +193,31 @@ def logout(data: LogoutRequest, db: Session = Depends(get_db)):
     db.commit()
 
     return {"message": "Logged out successfully"}
+
+
+@router.post("/forgot-password")
+def forgot_password(username: str, db: Session = Depends(get_db)):
+
+    user = db.query(User).filter(User.username == username).first()
+
+    if user:
+        otp = create_otp(db, user.id, "reset_password")
+        print(f"OTP for password reset for user {user.username}: {otp}")
+
+    return {"message": "If user exists, OTP has been sent"}
+
+
+
+
+@router.post("/reset-password")
+def reset_password(username: str, otp: str, new_password: str, db: Session = Depends(get_db)):
+
+    user = db.query(User).filter(User.username == username).first()
+
+    if not verify_user_otp(db, user.id, otp, "reset_password"):
+        raise HTTPException(400, "Invalid OTP")
+
+    user.password = hash_password(new_password)
+    db.commit()
+
+    return {"message": "Password updated"}

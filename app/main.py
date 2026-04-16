@@ -4,6 +4,7 @@ from app.db.session import engine
 
 from app.api.routes import user
 from app.api.routes import admin
+from app.models import  role, permissions, tokens, otp
 
 
 
