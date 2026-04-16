@@ -17,8 +17,7 @@ from app.models.otp import OTP
 from app.models.permissions import LogoutRequest
 from app.services.otp_service import create_otp, verify_user_otp
 from app.core.security import hash_password
-
-
+from app.core.security import verify_password
 
 
 
@@ -208,16 +207,65 @@ def forgot_password(username: str, db: Session = Depends(get_db)):
 
 
 
-
 @router.post("/reset-password")
-def reset_password(username: str, otp: str, new_password: str, db: Session = Depends(get_db)):
-
+def reset_password(
+    username: str,
+    otp: str,
+    new_password: str,
+    db: Session = Depends(get_db)
+):
+    #Step 1: Fetch user
     user = db.query(User).filter(User.username == username).first()
 
-    if not verify_user_otp(db, user.id, otp, "reset_password"):
-        raise HTTPException(400, "Invalid OTP")
+    if not user:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid username or OTP"
+        )
 
+    # Step 2: Verify OTP (with purpose)
+    is_valid_otp = verify_user_otp(
+        db,
+        user.id,
+        otp,
+        "reset_password"
+    )
+
+    if not is_valid_otp:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid username or OTP"
+        )
+
+    # 🛡️ Step 3: Password validation
+    if username.lower() in new_password.lower():
+        raise HTTPException(
+            status_code=400,
+            detail="Password should not contain username"
+        )
+
+    if len(new_password) < 8:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 8 characters long"
+        )
+
+    #Step 4: Prevent reuse of old password
+    if verify_password(new_password, user.password):
+        raise HTTPException(
+            status_code=400,
+            detail="New password must be different from the old password"
+        )
+
+    # 🔄 Step 5: Update password
     user.password = hash_password(new_password)
+
+    # (Optional but recommended) invalidate all OTPs for this user
+    # db.query(OTP).filter(OTP.user_id == user.id).update({"is_used": 1})
+
     db.commit()
 
-    return {"message": "Password updated"}
+    return {
+        "message": "Password reset successful",
+        "status": "success"
+    }
