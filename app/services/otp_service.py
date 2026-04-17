@@ -39,3 +39,7 @@ def verify_user_otp(db, user_id : int ,otp:str,purpose : str):
 
     return True
 
+
+
+
+

@@ -20,3 +20,6 @@ class Role(Base):
     name = Column(String, unique=True, nullable=False)
 
     permissions=relationship("Permission",secondary=role_permissions, back_populates="roles")
+
+
+
